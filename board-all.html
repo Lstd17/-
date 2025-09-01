@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>익명 게시판</title>
+    <style>
+        :root {
+            --main-bg: #fff;
+            --container-bg: #fff;
+            --border: #222;
+            --button-bg: #111;
+            --button-hover: #333;
+            --button-text: #fff;
+            --post-bg: #fff;
+            --post-border: #222;
+            --date: #555;
+            --delete-bg: #fff;
+            --delete-hover: #eee;
+            --delete-text: #111;
+            --link: #111;
+            --textarea-bg: #fff;
+            --textarea-border: #222;
+        }
+        body {
+            font-family: 'Pretendard', 'SUIT', 'Noto Sans Rounded', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Arial Rounded MT Bold', Arial, sans-serif;
+            background: var(--main-bg);
+            margin: 0; padding: 0;
+            color: #111;
+        }
+        .container {
+            max-width: 900px;
+            width: 99vw;
+            min-width: 320px;
+            box-sizing: border-box;
+            margin: 5vh auto;
+            background: var(--container-bg);
+            padding: 4vw 4vw 3vw 4vw;
+            border-radius: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1.5px solid var(--border);
+        }
+        h2 {
+            text-align: center;
+            color: #111;
+            font-family: inherit;
+        }
+        .write-box {
+            background: var(--post-bg);
+            border: 1.5px solid var(--post-border);
+            border-radius: 16px;
+            padding: 24px 18px 18px 18px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            resize: vertical;
+            padding: 16px;
+            border-radius: 14px;
+            border: 1.5px solid var(--textarea-border);
+            background: var(--textarea-bg);
+            font-size: 1.15rem;
+            box-sizing: border-box;
+            margin-bottom: 18px;
+            color: #111;
+            font-family: inherit;
+        }
+        button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 1.08rem;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: var(--button-hover);
+        }
+        .post {
+            background: var(--post-bg);
+            margin-bottom: 24px;
+            padding: 22px 18px 16px 18px;
+            border-radius: 16px;
+            border: 1.5px solid var(--post-border);
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+            position: relative;
+            word-break: break-all;
+            color: #111;
+            font-size: 1.13rem;
+            font-family: inherit;
+        }
+        .date {
+            font-size: 0.92em;
+            color: var(--date);
+            margin-top: 6px;
+        }
+        button.deleteBtn {
+            background: var(--delete-bg);
+            color: var(--delete-text);
+            border: 1.2px solid #222;
+            padding: 10px 24px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 1.05em;
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        button.deleteBtn:hover {
+            background: var(--delete-hover);
+        }
+        .link {
+            display: block;
+            margin-bottom: 18px;
+            text-align: center;
+            color: var(--link);
+            text-decoration: none;
+            font-weight: 500;
+            font-family: inherit;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 700px) {
+            .container {
+                padding: 6vw 2vw 4vw 2vw;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>익명 게시판</h2>
+        <div class="write-box">
+            <form id="postForm">
+                <textarea id="content" placeholder="내용을 입력하세요" required></textarea>
+                <button type="submit">글 올리기</button>
+            </form>
+        </div>
+        <div id="posts"></div>
+        <div id="adminCommentModal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.25); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; padding:32px 24px; border-radius:16px; min-width:260px; max-width:90vw; box-shadow:0 2px 12px rgba(0,0,0,0.12);">
+                <h3 style="margin-top:0;">관리자 댓글 달기</h3>
+                <textarea id="adminCommentInput" style="width:100%; min-height:60px; border-radius:10px; border:1.2px solid #222; padding:10px; font-size:1rem;"></textarea>
+                <div style="margin-top:12px; text-align:right;">
+                    <button id="adminCommentCancel" style="margin-right:8px; background:#eee; color:#111; border-radius:8px; border:none; padding:8px 18px;">취소</button>
+                    <button id="adminCommentSubmit" style="background:#111; color:#fff; border-radius:8px; border:none; padding:8px 18px;">등록</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 글 작성
+        document.getElementById('postForm').onsubmit = function(e) {
+            e.preventDefault();
+            const content = document.getElementById('content').value.trim();
+            if (!content) return;
+            const posts = JSON.parse(localStorage.getItem('anonPosts') || '[]');
+            posts.push({ content, date: new Date().toLocaleString() });
+            localStorage.setItem('anonPosts', JSON.stringify(posts));
+            document.getElementById('content').value = '';
+            loadPosts();
+        };
+
+        function isAdmin() {
+            return localStorage.getItem('isAdmin') === 'true';
+        }
+
+        function loadPosts() {
+            const posts = JSON.parse(localStorage.getItem('anonPosts') || '[]');
+            const postsDiv = document.getElementById('posts');
+            postsDiv.innerHTML = '';
+            posts.slice().reverse().forEach((post, idx) => {
+                const realIdx = posts.length - 1 - idx;
+                const div = document.createElement('div');
+                div.className = 'post';
+                let adminCommentHtml = '';
+                if (post.adminComment) {
+                    adminCommentHtml = `<div style="margin-top:14px; padding:12px 14px; background:#f7f7f7; border-radius:10px; border:1px solid #ddd; color:#333; font-size:0.98em;"><b style='color:#111;'>관리자</b>: ${post.adminComment.replace(/\n/g, '<br>')}</div>`;
+                }
+                let adminBtns = '';
+                if (isAdmin()) {
+                    adminBtns = `<button class='deleteBtn' data-index='${realIdx}'>삭제</button> <button class='commentBtn' data-index='${realIdx}'>댓글</button>`;
+                }
+                div.innerHTML = `
+                    ${adminBtns}
+                    <div>${post.content.replace(/\n/g, '<br>')}</div>
+                    <div class='date'>${post.date}</div>
+                    ${adminCommentHtml}
+                `;
+                postsDiv.appendChild(div);
+            });
+            // 삭제 버튼
+            if (isAdmin()) {
+                document.querySelectorAll('.deleteBtn').forEach(btn => {
+                    btn.onclick = function() {
+                        const idx = Number(this.getAttribute('data-index'));
+                        deletePost(idx);
+                    };
+                });
+                // 댓글 버튼
+                document.querySelectorAll('.commentBtn').forEach(btn => {
+                    btn.onclick = function() {
+                        const idx = Number(this.getAttribute('data-index'));
+                        openAdminCommentModal(idx);
+                    };
+                });
+            }
+        }
+
+        function deletePost(idx) {
+            if (!isAdmin()) return;
+            const posts = JSON.parse(localStorage.getItem('anonPosts') || '[]');
+            posts.splice(idx, 1);
+            localStorage.setItem('anonPosts', JSON.stringify(posts));
+            loadPosts();
+        }
+
+        // 관리자 댓글 모달
+        let currentCommentIdx = null;
+        function openAdminCommentModal(idx) {
+            currentCommentIdx = idx;
+            document.getElementById('adminCommentInput').value = '';
+            document.getElementById('adminCommentModal').style.display = 'flex';
+        }
+        document.getElementById('adminCommentCancel').onclick = function() {
+            document.getElementById('adminCommentModal').style.display = 'none';
+        };
+        document.getElementById('adminCommentSubmit').onclick = function() {
+            const comment = document.getElementById('adminCommentInput').value.trim();
+            if (!comment) return;
+            const posts = JSON.parse(localStorage.getItem('anonPosts') || '[]');
+            if (currentCommentIdx !== null && posts[currentCommentIdx]) {
+                posts[currentCommentIdx].adminComment = comment;
+                localStorage.setItem('anonPosts', JSON.stringify(posts));
+                loadPosts();
+            }
+            document.getElementById('adminCommentModal').style.display = 'none';
+        };
+
+        // 페이지 진입 시 관리자 아니면 삭제/댓글 버튼 숨김
+        loadPosts();
+        // 로그아웃 기능 (선택)
+        if (isAdmin()) {
+            const logoutBtn = document.createElement('a');
+            logoutBtn.innerText = '관리자 로그아웃';
+            logoutBtn.href = '#';
+            logoutBtn.className = 'link';
+            logoutBtn.onclick = function() {
+                localStorage.removeItem('isAdmin');
+                window.location.reload();
+                return false;
+            };
+            document.querySelector('.container').insertBefore(logoutBtn, document.querySelector('.container').children[1]);
+        }
+    </script>
+</body>
+</html>
